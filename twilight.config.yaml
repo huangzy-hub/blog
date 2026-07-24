@@ -1,13 +1,13 @@
 # 站点配置
 site:
     # 站点 URL（以斜杠结尾）
-    siteURL: "https://twilight.spr-aachen.com/"
+    siteURL: "https://blog.huangzy.xyz/"
     # 站点标题
-    title: "Twilight"
+    title: "纸翼"
     # 站点副标题
-    subtitle: "Blog Template"
+    subtitle: "hello welcome"
     # 语言配置
-    lang: "en"
+    lang: "zh-CN"
     # 翻译配置
     translate:
         # 启用翻译功能
@@ -77,10 +77,12 @@ site:
                 # 在主页显示文本
                 enable: true
                 # 主标题
-                title: "Twilight"
+                title: "纸翼"
                 # 副标题，支持单个字符串或字符串数组
                 subtitle:
-                    - "Illuminate Our Paths"
+                    - "嵌入式学习笔记"
+                    - "网络安全小探索"
+                    - "Web 技术碎碎念"
                 # 副标题打字机效果
                 typewriter:
                     # 启用副标题打字机效果
@@ -129,7 +131,7 @@ site:
             # 是否启用加载标题
             enable: true
             # 加载标题文本
-            content: "LOADING"
+            content: "纸翼 · 加载中"
             # 动画周期 (s)
             interval: 1.5
         # 加载动画配置
@@ -166,31 +168,6 @@ navbar:
             "Home"
         - # 一级导航链接 - 归档 (预设)
             "Archive"
-        - # 一级导航链接 - 展览 (自定义)
-            # 导航名称
-            name: "Exhibition"
-            # 导航链接
-            url: "/exhibition/"
-            # 导航图标
-            icon: "material-symbols:person"
-            # 导航描述
-            description: "A collection of my creative works and experiences"
-            # 子链接
-            children:
-                - # 二级导航链接 - 项目 (预设)
-                    "Projects"
-                - # 二级导航链接 - 技能 (预设)
-                    "Skills"
-                - # 二级导航链接 - 历程 (预设)
-                    "Timeline"
-                - # 二级导航链接 - 日记 (预设)
-                    "Diary"
-                - # 二级导航链接 - 相册 (预设)
-                    "Albums"
-                - # 二级导航链接 - 动画 (预设)
-                    "Anime"
-        - # 一级导航链接 - 好友 (预设)
-            "Friends"
         - # 一级导航链接 - 关于 (预设)
             "About"
 
@@ -290,11 +267,11 @@ sidebar:
 # 资料配置
 profile:
     # 头像配置 (相对于 /public 目录)
-    avatar: "/assets/images/avatar.jpg"
+    avatar: "/assets/images/head.jpg"
     # 信息配置
-    name: "Twilight"
+    name: "纸翼"
     # 简介配置
-    bio: "Hi"
+    bio: "专注嵌入式，探索网络安全，学习Web技术的小登"
     # 链接配置
     links:
         - # 链接示例
@@ -303,14 +280,14 @@ profile:
             # 图标
             icon: "fa6-brands:github"
             # 链接
-            url: "https://github.com/Spr-Aachen/Twilight"
+            url: "https://github.com/huangzy-hub"
 
 # 公告配置
 announcement:
     # 公告标题
-    title: "Announcement"
+    title: "欢迎来到纸翼的博客"
     # 公告内容
-    content: "Welcome to my blog!"
+    content: "这里记录嵌入式、网络安全、Web技术的学习笔记~"
     # 允许用户关闭公告
     closable: true
     # 链接配置
@@ -318,7 +295,7 @@ announcement:
         # 启用链接
         enable: true
         # 链接文本
-        text: "Learn More"
+        text: "了解更多"
         # 链接 URL
         url: "/about/"
         # 是否外部链接
@@ -351,7 +328,7 @@ post:
             # 环境 ID
             envId: "https://twikoo.vercel.app"
             # 语言
-            lang: "en"
+            lang: "zh-CN"
 
 # 页脚配置
 footer:
@@ -457,20 +434,20 @@ pio:
     # 对话框配置
     dialog:
         # 欢迎词
-        welcome: "Welcome!"
+        welcome: "欢迎来到我的博客~"
         # 触摸提示
         touch:
-            - "What are you doing?"
-            - "Stop touching me!"
-            - "Don't bully me like that!"
+            - "你在点我吗？"
+            - "别摸啦，我会害羞的~"
+            - "再点我就不理你了！"
             - "(｡í _ ì｡)"
         # 首页提示
-        home: "Click here to go back to homepage!"
+        home: "点击这里返回首页哦！"
         # 换装提示
         skin:
-            - "Want to see my new outfit?"
-            - "The new outfit looks great~"
+            - "想看我换衣服吗？"
+            - "新衣服是不是超好看~"
         # 关闭提示
-        close: "See you next time~"
+        close: "下次再见啦~"
         # 关于链接
         link: "https://nav.kungal.org"
