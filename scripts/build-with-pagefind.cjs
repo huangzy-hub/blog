@@ -44,8 +44,8 @@ function getPagefindOutputDir(platform) {
 
 // Main function
 function main() {
-  const platform = detectPlatform();
-  const outputDir = getPagefindOutputDir(platform);
+  const platform = 'github-pages';
+  const outputDir = 'dist';
   
   console.log(`🚀 Detected deployment platform: ${platform}`);
   console.log(`📁 Pagefind output directory: ${outputDir}`);

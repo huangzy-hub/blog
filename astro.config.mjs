@@ -5,9 +5,6 @@ import svelte, { vitePreprocess } from "@astrojs/svelte";
 import tailwind from "@astrojs/tailwind";
 import swup from "@swup/astro";
 import sitemap from "@astrojs/sitemap";
-import vercel from "@astrojs/vercel";
-import cloudflarePages from "@astrojs/cloudflare";
-import decapCmsOauth from "astro-decap-cms-oauth";
 import expressiveCode from "astro-expressive-code";
 import icon from "astro-icon";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
@@ -32,20 +29,11 @@ import { remarkMermaid } from "./src/plugins/remark-mermaid.js";
 import { remarkReadingTime } from "./src/plugins/remark-reading-time.mjs";
 
 
-// https://astro.build/config
-// Choose adapter depending on deployment environment
-const adapter = process.env.CF_PAGES ? cloudflarePages() : vercel({ mode: "serverless" });
-
 export default defineConfig({
     site: siteConfig.siteURL,
     base: "/",
     trailingSlash: "always",
-    adapter: adapter,
     integrations: [
-        decapCmsOauth({
-            decapCMSVersion: "3.3.3",
-            oauthDisabled: true, // Disable it to use oauth, requires .env configuration
-        }),
         tailwind({
             nesting: true,
         }),
