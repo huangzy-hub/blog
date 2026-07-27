@@ -37,7 +37,6 @@
 ## ✨ 特性
 
 ### 内容
-- **CMS 功能**: 基于 Decap CMS 的便捷内容管理
 - **数据可视化**: 可视化的项目、技能等个人数据
 - **自动化导航**: 自动化生成的文章导航
 
@@ -110,7 +109,6 @@
 
 - 原型 - [Fuwari](https://github.com/saicaca/fuwari)
 - 灵感 - [Yukina](https://github.com/WhitePaper233/yukina) & [Mizuki](https://github.com/matsuzaka-yuki/Mizuki)
-- CMS - [astro-decap-cms-oauth](https://github.com/dorukgezici/astro-decap-cms-oauth)
 - 翻译 - [translate](https://gitee.com/mail_osc/translate)
 
 

@@ -37,7 +37,6 @@ English | [**中文**](docs/README_ZH.md)
 ## ✨ Features
 
 ### Content
-- **CMS Functionality**: Easy content management with Decap CMS integration
 - **Data Visualization**: Visualized personal data like projects, skills etc.
 - **Automatic Navigation**: Automatic generation of post navigation
 
@@ -110,7 +109,6 @@ Deploy your blog to any static hosting platform
 
 - Prototype   - [Fuwari](https://github.com/saicaca/fuwari)
 - Inspiration - [Yukina](https://github.com/WhitePaper233/yukina) & [Mizuki](https://github.com/matsuzaka-yuki/Mizuki)
-- CMS         - [astro-decap-cms-oauth](https://github.com/dorukgezici/astro-decap-cms-oauth)
 - Translation - [translate](https://gitee.com/mail_osc/translate)
 
 
