@@ -53,34 +53,177 @@ const getPageUrl = (p: number) => {
 };
 ---
 
-<div class:list={[className, "flex flex-row gap-3 justify-center"]} style={style}>
-    <a href={page.url.prev || ""} aria-label={page.url.prev ? "Previous Page" : null}
-       class:list={["btn-card overflow-hidden rounded-lg text-[var(--primary)] w-11 h-11",
-           {"disabled": page.url.prev == undefined}
-       ]}
-    >
-        <Icon name="material-symbols:chevron-left-rounded" class="text-[1.75rem]"></Icon>
-    </a>
-    <div class="bg-[var(--card-bg)] flex flex-row rounded-lg items-center text-neutral-700 dark:text-neutral-300 font-bold">
-        {pages.map((p) => {
-            if (p == HIDDEN)
-                return <Icon name="material-symbols:more-horiz" class="mx-1"/>;
-            if (p == page.currentPage)
-                return <div class="h-11 w-11 rounded-lg bg-[var(--primary)] flex items-center justify-center
-                    font-bold text-white dark:text-black/70"
-                >
-                    {p}
-                </div>
-            return <a href={url(getPageUrl(p))} aria-label={`Page ${p}`}
-                class="btn-card w-11 h-11 rounded-lg overflow-hidden active:scale-[0.85]"
-            >{p}</a>
-        })}
+<div
+    id="infinite-pagination"
+    data-next-page={page.url.next || ""}
+    class:list={[className, "flex flex-col gap-3 items-center"]}
+    style={style}
+>
+    <div class="pagination-controls flex flex-row gap-3 justify-center">
+        <a href={page.url.prev || ""} aria-label={page.url.prev ? "Previous Page" : null}
+           class:list={["btn-card overflow-hidden rounded-lg text-[var(--primary)] w-11 h-11",
+               {"disabled": page.url.prev == undefined}
+           ]}
+        >
+            <Icon name="material-symbols:chevron-left-rounded" class="text-[1.75rem]"></Icon>
+        </a>
+        <div class="bg-[var(--card-bg)] flex flex-row rounded-lg items-center text-neutral-700 dark:text-neutral-300 font-bold">
+            {pages.map((p) => {
+                if (p == HIDDEN)
+                    return <Icon name="material-symbols:more-horiz" class="mx-1"/>;
+                if (p == page.currentPage)
+                    return <div class="h-11 w-11 rounded-lg bg-[var(--primary)] flex items-center justify-center
+                        font-bold text-white dark:text-black/70"
+                    >
+                        {p}
+                    </div>
+                return <a href={url(getPageUrl(p))} aria-label={`Page ${p}`}
+                    class="btn-card w-11 h-11 rounded-lg overflow-hidden active:scale-[0.85]"
+                >{p}</a>
+            })}
+        </div>
+        <a href={page.url.next || ""} aria-label={page.url.next ? "Next Page" : null}
+           class:list={["btn-card overflow-hidden rounded-lg text-[var(--primary)] w-11 h-11",
+               {"disabled": page.url.next == undefined}
+           ]}
+        >
+            <Icon name="material-symbols:chevron-right-rounded" class="text-[1.75rem]"></Icon>
+        </a>
     </div>
-    <a href={page.url.next || ""} aria-label={page.url.next ? "Next Page" : null}
-       class:list={["btn-card overflow-hidden rounded-lg text-[var(--primary)] w-11 h-11",
-           {"disabled": page.url.next == undefined}
-       ]}
-    >
-        <Icon name="material-symbols:chevron-right-rounded" class="text-[1.75rem]"></Icon>
-    </a>
+    <div class="infinite-scroll-status hidden min-h-11 items-center justify-center gap-2 text-sm text-50" aria-live="polite">
+        <span class="infinite-scroll-spinner hidden" aria-hidden="true"></span>
+        <span class="infinite-scroll-message"></span>
+    </div>
 </div>
+
+<style>
+    .infinite-scroll-spinner {
+        width: 1.1rem;
+        height: 1.1rem;
+        border: 2px solid color-mix(in srgb, var(--primary) 25%, transparent);
+        border-top-color: var(--primary);
+        border-radius: 9999px;
+        animation: infinite-scroll-spin 700ms linear infinite;
+    }
+
+    @keyframes infinite-scroll-spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+
+<script>
+    type InfiniteScrollWindow = Window & {
+        __twilightInfiniteScrollCleanup?: () => void;
+        __twilightInfiniteScrollListenerAdded?: boolean;
+    };
+
+    const infiniteWindow = window as InfiniteScrollWindow;
+
+    function initializeInfiniteScroll() {
+        infiniteWindow.__twilightInfiniteScrollCleanup?.();
+
+        const pagination = document.getElementById("infinite-pagination");
+        const postList = document.getElementById("post-list");
+        if (!(pagination instanceof HTMLElement) || !(postList instanceof HTMLElement)) return;
+
+        const controls = pagination.querySelector<HTMLElement>(".pagination-controls");
+        const status = pagination.querySelector<HTMLElement>(".infinite-scroll-status");
+        const spinner = pagination.querySelector<HTMLElement>(".infinite-scroll-spinner");
+        const message = pagination.querySelector<HTMLElement>(".infinite-scroll-message");
+        if (!controls || !status || !spinner || !message) return;
+
+        controls.classList.add("hidden");
+        status.classList.remove("hidden");
+        status.classList.add("flex");
+
+        let nextPage = pagination.dataset.nextPage || "";
+        let loading = false;
+        let stopped = false;
+        let controller: AbortController | null = null;
+
+        const setStatus = (text: string, showSpinner = false) => {
+            message.textContent = text;
+            spinner.classList.toggle("hidden", !showSpinner);
+        };
+
+        const stop = (text: string) => {
+            stopped = true;
+            observer.disconnect();
+            setStatus(text);
+        };
+
+        const loadNextPage = async () => {
+            if (loading || stopped || !nextPage) return;
+            loading = true;
+            setStatus("正在加载更多文章…", true);
+            controller = new AbortController();
+
+            try {
+                const response = await fetch(new URL(nextPage, window.location.origin), {
+                    signal: controller.signal,
+                    headers: { "X-Requested-With": "infinite-scroll" },
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const html = await response.text();
+                const nextDocument = new DOMParser().parseFromString(html, "text/html");
+                const nextPostList = nextDocument.getElementById("post-list");
+                const nextPagination = nextDocument.getElementById("infinite-pagination");
+                if (!nextPostList || !nextPagination) throw new Error("下一页结构不完整");
+
+                const fragment = document.createDocumentFragment();
+                for (const card of Array.from(nextPostList.children)) {
+                    const importedCard = document.importNode(card, true);
+                    if (importedCard instanceof HTMLElement) {
+                        importedCard.style.removeProperty("animation-delay");
+                    }
+                    fragment.appendChild(importedCard);
+                }
+                postList.appendChild(fragment);
+
+                nextPage = nextPagination.dataset.nextPage || "";
+                pagination.dataset.nextPage = nextPage;
+                if (nextPage) {
+                    setStatus("继续下滑加载更多");
+                } else {
+                    stop("已经加载全部文章");
+                }
+            } catch (error) {
+                if (error instanceof DOMException && error.name === "AbortError") return;
+                console.error("Failed to load the next post page:", error);
+                controls.classList.remove("hidden");
+                stop("自动加载失败，可使用分页按钮继续浏览");
+            } finally {
+                loading = false;
+                controller = null;
+            }
+        };
+
+        const observer = new IntersectionObserver(
+            entries => {
+                if (entries.some(entry => entry.isIntersecting)) void loadNextPage();
+            },
+            { rootMargin: "600px 0px" },
+        );
+
+        if (nextPage) {
+            setStatus("继续下滑加载更多");
+            observer.observe(pagination);
+        } else {
+            stop("已经加载全部文章");
+        }
+
+        infiniteWindow.__twilightInfiniteScrollCleanup = () => {
+            stopped = true;
+            controller?.abort();
+            observer.disconnect();
+        };
+    }
+
+    initializeInfiniteScroll();
+
+    if (!infiniteWindow.__twilightInfiniteScrollListenerAdded) {
+        document.addEventListener("swup:contentReplaced", initializeInfiniteScroll);
+        infiniteWindow.__twilightInfiniteScrollListenerAdded = true;
+    }
+</script>
