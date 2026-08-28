@@ -1,7 +1,7 @@
 ---
 title: paipopAi对话玩具解析（二）：从按键与摇一摇到对话打断
 published: 2026-08-27
-updated: 2026-08-27
+updated: 2026-08-28
 pinned: false
 description: 沿着按键和摇一摇两条真实调用链，讲清回调、杰理系统事件、app_core、玩具状态机与 PaipopSDK 如何协作完成对话打断。
 tags: [AC791N, Paipop, 嵌入式, 系统事件, 回调函数, 状态机]
@@ -144,7 +144,9 @@ static int paipop_toy_event_handler(struct application *app,
 
 它不是由项目代码反复手动调用的“收集函数”。项目只是把函数地址注册到操作表；事件到达当前应用时，杰理框架再通过该函数指针调用它。它自身也不保存事件，只把这封“信”交给项目的分类层。
 
-### 2. 信封中的 `type`、`from` 和 `payload`
+这两个参数也要分清：`app` 是 `app_core` 提供的当前 `paipop_toy` 应用对象，当前实现没有用到它；`event` 是事件框架交付的外层 `struct sys_event`，不是按键驱动里局部变量 `e` 的地址。后面要先检查 `event->type` 再决定 `event->payload` 的结构类型；如果生产者不完全可信，健壮代码还应检查 `event->len` 是否足以容纳目标结构。
+
+### 2. 从局部 `e/dev` 到 `event->payload`：装包、投递与拆包
 
 杰理定义的系统事件结构是：
 
@@ -171,6 +173,49 @@ struct sys_event {
 - `from` 表示来源；
 - `len` 表示内容长度；
 - `payload` 是具体事件数据。
+
+**投递不是把局部指针原样留到以后。** 系统事件接口的签名是：
+
+```c
+int sys_event_notify(u16 type, u8 from, void *event, u8 len);
+```
+
+调用方给出“事件大类、来源、数据地址和数据长度”，事件框架据此把数据交付为带 `payload` 的统一事件。以按键为例，发送端的 `e` 是 `key_driver_scan()` 栈上的局部变量：
+
+```c
+struct key_event e = {0};
+
+e.type = scan_para->key_type;
+e.action = key_event;
+e.value = key_value;
+key_event_notify(KEY_EVENT_FROM_KEY, &e);
+```
+
+摇一摇则由项目显式创建另一种局部数据并调用系统接口：
+
+```c
+struct device_event dev = {0};
+
+dev.event = PAIPOP_EVT_SHAKE;
+dev.value = 0;
+dev.arg = NULL;
+sys_event_notify(SYS_DEVICE_EVENT,
+                 PAIPOP_DEVICE_EVENT_FROM_APP,
+                 &dev, sizeof(dev));
+```
+
+当前最终 `sdk.elf` 中，经过 LTO 特化的本项目按键路径可以确认等效调用为 `sys_event_notify(SYS_KEY_EVENT, KEY_EVENT_FROM_KEY, event, 6)`；这里的 6 是当前 ABI 下 `struct key_event` 的大小。这个证据只确认当前 K1/K2 路径，不泛化为所有构建、所有 `from` 参数都完全相同。后续应用回调看到的数据关系应理解为：
+
+```text
+发送时                         接收时
+
+&e → struct key_event          event → struct sys_event
+      type/action/value                 type = SYS_KEY_EVENT
+                                        from = KEY_EVENT_FROM_KEY
+                                        payload → e 的字段内容
+```
+
+因此 `paipop_toy_event_handler(app, event)` 中的 `event` **不等于**原来的 `&e`；类型也不同：前者是 `struct sys_event *`，后者是 `struct key_event *`。但将 `event->payload` 转回 `struct key_event *` 后，读到的 `type/action/value` 来自发送时的 `e`。当前 ELF 的反汇编还确认，事件框架把 4 字节信封头和 `len` 字节负载复制进内部环形缓冲区；这是字节级浅拷贝，结构体中的指针所指对象不会被继续深拷贝，本项目摇一摇消息里的 `dev.arg` 恰好为 `NULL`。精确 C 实现仍在杰理二进制库边界，本文不把反汇编结论虚构成某段可见的 `malloc/memcpy` 源码。公开接口也没有承诺 `payload` 在回调结束后仍然有效，因此处理函数不应把这个指针保存起来长期使用；确实需要跨回调保留时，应复制所需字段到自己管理的存储中。
 
 项目先判断 `type`，再决定怎样解释 `payload`：
 
@@ -200,7 +245,16 @@ int paipop_events_handle_sys_event(struct sys_event *event)
 
 源码位置：`src/app/paipop_events.c:282-299`。
 
-虽然杰理定义了五类顶层事件，当前项目只在这里分类 `KEY`、`NET` 和 `DEVICE`。`TOUCH`、`BT` 或不属于本模块的事件会返回 `false`。必须先判断类型再转换 `payload`，否则可能把网络数据误当成 `struct key_event` 读取。
+虽然杰理定义了五类顶层事件，当前项目只在这里分类 `KEY`、`NET` 和 `DEVICE`。`TOUCH`、`BT` 或不属于本模块的事件会返回 `false`。必须先判断类型再转换 `payload`，否则可能把网络数据误当成 `struct key_event` 读取。这里的强制转换不会重新创建或复制一份按键事件，只是告诉 C 编译器“从这个地址开始，按照 `struct key_event` 的字段布局读取”。
+
+不过，检查 `type` 只能确定“期望按哪种结构解释”，不能证明负载长度一定足够。当前构建的正常生产者分别发送 6 字节 `key_event` 和 12 字节 `device_event`，而 `paipop_events_handle_sys_event()` / `paipop_events_handle_device()` 没有校验 `event->len`，是在信任杰理 SDK 和项目内部生产者。若以后允许外部模块构造事件，更稳妥的解包条件应类似：
+
+```c
+event->type == SYS_KEY_EVENT &&
+event->len >= sizeof(struct key_event)
+```
+
+`if (!dev)` 也不能替代长度检查：只要外层 `event` 非空，它尾部的 `payload` 地址通常就不是空指针，即使实际负载不足。
 
 ### 3. `true`、`false` 与默认事件处理器
 
@@ -238,9 +292,14 @@ void app_default_event_handler(struct sys_event *event)
 
 按键是两条链中更直接的一条：板级配置把 PC1、PC2 映射为 K1、K2，`board_init()` 调用 `key_driver_init()` 后，由杰理按键驱动周期扫描、消抖并识别动作。这里注册的是按键硬件配置，不是把 `paipop_events_handle_key()` 直接挂到 GPIO。证据位于 `board/wl82/paipop_v1_1_board.c:105-123,209-215`。
 
-驱动确认动作后填充 `struct key_event` 并通知事件框架：
+`key_driver_scan()` 每轮先创建局部变量 `e`，通过 `scan_para->get_value()` 取得当前键值，再经过消抖和单击/长按判断：
 
 ```c
+struct key_event e = {0};
+
+cur_key_value = scan_para->get_value();
+/* 省略消抖和 CLICK/LONG/HOLD/UP 判断 */
+
 e.type = scan_para->key_type;
 e.action = key_event;
 e.value = key_value;
@@ -250,9 +309,21 @@ if (key_event_remap(&e)) {
 }
 ```
 
-源码位置：杰理 SDK `apps/common/key/key_driver.c:181-190`。`action` 表示 `CLICK/LONG/HOLD/UP`，`value` 表示 K1/K2。`key_event_notify()` 已经进入杰理按键/系统事件链，项目不需要再包装一次 `SYS_KEY_EVENT`。
+源码位置：杰理 SDK `apps/common/key/key_driver.c:60-190`。`action` 表示 `CLICK/LONG/HOLD/UP`，`value` 表示 K1/K2。`key_event_notify()` 已经进入杰理按键/系统事件链，项目不需要再包装一次 `SYS_KEY_EVENT`。
 
-当前应用收到事件后，`paipop_events_handle_key()` 只接受 K1/K2，在 OTA 期间屏蔽输入，并抑制组合键释放产生的点击。普通单击最终被翻译为项目业务事件：
+事件投递成功、框架把外层 `event` 交给 `paipop_toy_event_handler()` 后，后面的处理已经回到普通同步函数调用：
+
+```c
+/* 应用总入口：只负责转发 */
+return paipop_events_handle_sys_event(event);
+
+/* 分类层：先确认外层事件类型，再解释 payload */
+case SYS_KEY_EVENT:
+    return paipop_events_handle_key(
+        (struct key_event *)event->payload);
+```
+
+`paipop_events_handle_key()` 再依次判断：是否为 K1/K2、OTA 是否忙、是否为 `KEY_EVENT_UP`，以及这次 `CLICK` 是否只是组合键释放产生的残余点击。普通单击最终被翻译为项目业务事件：
 
 ```c
 if (key->action == KEY_EVENT_CLICK) {
@@ -267,14 +338,16 @@ if (key->action == KEY_EVENT_CLICK) {
 ```text
 PC1/PC2
   ⇢ 杰理扫描、消抖和动作识别
+  → 创建并填充局部 struct key_event e
   → key_event_notify(KEY_EVENT_FROM_KEY, &e)
-  ⇢ SYS_KEY_EVENT → paipop_toy_event_handler()
-  → paipop_events_handle_sys_event()
-  → paipop_events_handle_key()
-  → paipop_fsm_dispatch(PAIPOP_EVT_TOUCH_CLICK)
+  ⇢ sys_event：type=SYS_KEY_EVENT，payload=e 的内容
+  ⇢ paipop_toy_event_handler(app, event)
+  → paipop_events_handle_sys_event(event)
+  → paipop_events_handle_key((key_event *)event->payload)
+  → paipop_fsm_dispatch(PAIPOP_EVT_TOUCH_CLICK, key->value)
 ```
 
-到这里，平台语义“哪个键发生了什么动作”已经变成产品语义“用户发起一次点击”。接下来是否结束当前轮次，仍由 FSM 根据状态决定。
+到这里，平台语义“哪个键发生了什么动作”已经变成产品语义“用户发起一次点击”。`key->value` 仍把 K1/K2 传给 FSM，但当前 `PAIPOP_EVT_TOUCH_CLICK` 分支没有按这个值区分行为，所以两个键的普通单击走相同业务路径。接下来是否结束当前轮次，仍由 FSM 根据状态决定。
 
 ## 五、摇一摇链（FLOW-02）：从业务回调进入系统事件
 
@@ -314,13 +387,26 @@ int paipop_events_post(enum paipop_toy_event event, int value)
 
     dev.event = (unsigned char)event;
     dev.value = value;
+    dev.arg = NULL;
     return sys_event_notify(SYS_DEVICE_EVENT,
                             PAIPOP_DEVICE_EVENT_FROM_APP,
                             &dev, sizeof(dev));
 }
 ```
 
-源码位置：`src/app/paipop_events.c:136-156`。事件回到应用后，还要用来源值 `0x80` 防止把其他设备事件误当成 Paipop 业务消息：
+源码位置：`src/app/paipop_events.c:136-156`。`dev` 的局部生命周期和装包原则已经在第三节说明；对这次摇一摇而言，应用回调收到的外层事件可以具体读成：
+
+```text
+event->type    = SYS_DEVICE_EVENT
+event->from    = PAIPOP_DEVICE_EVENT_FROM_APP（0x80）
+event->payload = struct device_event {
+    event = PAIPOP_EVT_SHAKE,
+    value = 0,
+    arg   = NULL
+}
+```
+
+事件回到应用后，还要用来源值 `0x80` 防止把 USB、SD、充电等其他设备事件误当成 Paipop 业务消息：
 
 ```c
 if (event->from != PAIPOP_DEVICE_EVENT_FROM_APP) {
@@ -343,9 +429,27 @@ return paipop_fsm_dispatch(
 摇一摇服务 → 业务回调 → SYS_DEVICE_EVENT ────┼→ paipop_events
                                              │      ↓
 PaipopSDK 生命周期回调 → SYS_DEVICE_EVENT ───┘  PAIPOP_EVT_*
-                                                    ↓
-                                                   FSM
+                                                     ↓
+                                                    FSM
 ```
+
+把刚才两种投递逐项并排，就能看出它们“信封相同、信纸不同”：
+
+| 对比项 | K1/K2 按键 | 摇一摇 |
+|---|---|---|
+| 谁确认物理输入 | 杰理按键驱动扫描、消抖和动作识别 | Paipop 摇一摇服务：ISR 留 pending，20 ms 回调检查 STK8321 和冷却 |
+| 投递前的局部数据 | `struct key_event e` | `struct device_event dev` |
+| 谁进入系统事件接口 | 杰理 `key_event_notify()` 在库内转入 `sys_event_notify()` | 项目的 `paipop_events_post()` 直接调用 `sys_event_notify()` |
+| 外层 `sys_event.type` | `SYS_KEY_EVENT` | `SYS_DEVICE_EVENT` |
+| 外层 `sys_event.from` | `KEY_EVENT_FROM_KEY` | `PAIPOP_DEVICE_EVENT_FROM_APP`（`0x80`） |
+| `payload` 的解释类型 | `struct key_event` | `struct device_event` |
+| 应用内分支 | `paipop_events_handle_key()` | `paipop_events_handle_device()` |
+| 业务事件何时形成 | 接收后把 `KEY_EVENT_CLICK` 翻译为 `PAIPOP_EVT_TOUCH_CLICK` | 投递前已经写入 `PAIPOP_EVT_SHAKE` |
+| 最终汇合点 | `paipop_fsm_dispatch()` | `paipop_fsm_dispatch()` |
+
+投递成功后，两条链都会进入同一个 `paipop_toy_event_handler()`。这不是因为 `event` 指向相同类型的原始对象，而是因为杰理事件框架把不同 payload 都包进了统一的 `struct sys_event`。总入口只负责看 `type` 分流，具体处理函数再按对应结构解释 `payload`。
+
+“投递成功后”这个限定不能省略。当前 `sdk.elf` 可确认 `sys_event_notify()` 在事件缓冲区未初始化或空间不足时会返回 `-ENOMEM`；但按键驱动忽略了 `key_event_notify()` 的返回值，`paipop_events_shake_cb()` 也忽略了 `paipop_events_post()` 的返回值，所以极端情况下本次业务事件会丢失。摇一摇路径在调用业务回调之前已经更新 `last_shake_ms`，因此即使投递失败，600 ms 冷却仍会开始计算。正常运行时这通常不是主线问题，但它说明“发现输入”不等于“应用一定收到事件”。
 
 这里很容易把三种带有“注册”或“回调”字样的机制混为一谈：
 
@@ -611,7 +715,7 @@ I²C/SPI 的读写由 `dev_ioctl()`、`dev_read()`、`dev_write()` 直接返回�
 
 ### Q3：为什么不把 `paipop_events_handle_key()` 直接注册给 `app_core`？
 
-应用入口签名是 `(application *, sys_event *)`，按键处理函数却只接收 `key_event *`，并且是 `paipop_events.c` 内部的 `static` 函数。统一入口还要面对网络、设备等事件，必须先检查 `event->type` 才能安全转换 payload。
+应用入口签名是 `(application *, sys_event *)`，按键处理函数却只接收 `key_event *`，并且是 `paipop_events.c` 内部的 `static` 函数。统一入口还要面对网络、设备等事件，必须先检查 `event->type` 决定 payload 类型；若事件生产者不完全可信，还应同时校验 `event->len`。
 
 ### Q4：I²C、SPI 完成读写后会自动进入 `paipop_toy_event_handler()` 吗？
 
@@ -629,7 +733,7 @@ I²C/SPI 的读写由 `dev_ioctl()`、`dev_read()`、`dev_write()` 直接返回�
 
 可以这样概括整个项目的控制链：
 
-> 杰理启动 `paipop_toy` 后，按键驱动扫描、消抖并产生 `SYS_KEY_EVENT`；摇一摇先由 PA5/PA6 ISR 留下硬件 pending，再由 `app_core` 中的 20 ms 回调确认 `ANY_MOTION` 和冷却时间，最后包装成自定义 `SYS_DEVICE_EVENT`。事件框架负责排队和路由，`app_core` 在自己的任务上下文中依次执行回调，`paipop_events` 再把平台事件翻译成 `PAIPOP_EVT_TOUCH_CLICK` 或 `PAIPOP_EVT_SHAKE`。只有玩具 FSM 处于 `ENGINE_CHAT` 时，才会请求 `Paipop_ExitChat`；请求未被同步拒绝后，玩具状态仍暂时保持 `ENGINE_CHAT`，直到 PaipopSDK 用生命周期回调报告 `EXIT`。随后 FSM 进入 `ENGINE_EXIT`，经过 1.2 秒保护并等待本地提示音，OTA 未阻止重启时，再用 `continue_chat_round` 在同一 conversation 中开始新的 turn。FSM 负责决策，PaipopSDK 负责执行；I²C/SPI、PCM 和眼睛共享状态并不会全部走系统事件。
+> 杰理启动 `paipop_toy` 后，按键驱动扫描、消抖，把局部 `key_event e` 的内容装入 `SYS_KEY_EVENT`；摇一摇先由 PA5/PA6 ISR 留下硬件 pending，再由 `app_core` 中的 20 ms 回调确认 `ANY_MOTION` 和冷却时间，把局部 `device_event dev` 的内容装入自定义 `SYS_DEVICE_EVENT`。投递成功时，应用回调收到的不是原来的 `&e` 或 `&dev`，而是统一的 `sys_event` 信封；`paipop_events` 根据 `type` 把 `payload` 解释成对应结构，再翻译为 `PAIPOP_EVT_TOUCH_CLICK` 或 `PAIPOP_EVT_SHAKE`。只有玩具 FSM 处于 `ENGINE_CHAT` 时，两种输入才会请求 `Paipop_ExitChat`；请求未被同步拒绝后，玩具状态仍暂时保持 `ENGINE_CHAT`，直到 PaipopSDK 用生命周期回调报告 `EXIT`。随后 FSM 进入 `ENGINE_EXIT`，经过 1.2 秒保护并等待本地提示音，OTA 未阻止重启时，再用 `continue_chat_round` 在同一 conversation 中开始新的 turn。FSM 负责决策，PaipopSDK 负责执行；I²C/SPI、PCM 和眼睛共享状态并不会全部走系统事件。
 
 ## 十二、源码证据索引
 
@@ -639,10 +743,11 @@ I²C/SPI 的读写由 `dev_ioctl()`、`dev_read()`、`dev_write()` 直接返回�
 | 应用状态和操作表签名 | 杰理 SDK `include_lib/system/app_core.h:16-39` | 可验证的接口契约 |
 | `app_core` 库内实现 | `cpu/wl82/liba/system.a(app_core.c.o)`、`sdk.map` | 符号/链接强证据，不是完整源码 |
 | 系统事件类型与信封结构 | 杰理 SDK `include_lib/utils/event/event.h:9-25,55-58` | 可验证的接口契约 |
-| 按键与通用事件库实现 | `cpu/wl82/liba/event.a(key_event.c.o,event.c.o)`、`sdk.map` | 符号/链接强证据；队列和钩子细节仍在二进制边界 |
+| 按键与设备 payload 结构 | 杰理 SDK `include_lib/utils/event/key_event.h:75-97`；`include_lib/utils/event/device_event.h:40-46` | 可验证的结构和通知接口声明；不等于库内队列实现源码 |
+| 按键与通用事件库实现 | `cpu/wl82/liba/event.a(key_event.c.o,event.c.o)`、最终 `sdk.elf` 中 `key_event_notify: 0x02003806-0x0200381c`、`sys_event_notify: 0x02003774-0x02003804` | 当前构建的符号/反汇编证据；确认按键参数、浅拷贝和 `-ENOMEM` 路径，仍不是普通 C 源码 |
 | 默认处理器语义 | 杰理 SDK `apps/common/example/system/event/main.c:32-57` | 官方示例；只确认应用消费与默认后备关系 |
 | Paipop 生命周期与事件入口 | `apps/Paipop_YP_Toy/app_main.c:80-161` | 可验证的项目注册和回调定义 |
-| K1/K2 配置与驱动通知 | `board/wl82/paipop_v1_1_board.c:105-123,209-215`；SDK `apps/common/key/key_driver.c:181-190` | 可验证到 `key_event_notify()` 调用点；后续进入事件库边界 |
+| K1/K2 配置与驱动通知 | `board/wl82/paipop_v1_1_board.c:105-123,209-215`；SDK `apps/common/key/key_driver.c:60-190` | 可验证局部 `e`、扫描和 `key_event_notify()` 调用点；后续进入事件库边界 |
 | 系统事件分类与业务发布 | `src/app/paipop_events.c:136-299` | 可验证的项目直接调用与类型转换 |
 | 摇一摇回调交接 | `src/services/paipop_shake.c:31-39,79-187` | 注册和项目逻辑已验证；硬件触发未运行观测 |
 | 设备操作表与 `.device` | SDK `include_lib/driver/device/device.h:14-43`；`board/wl82/paipop_v1_1_board.c:181-190` | 可验证的注册关系，不代表自动发布事件 |
@@ -654,6 +759,6 @@ I²C/SPI 的读写由 `dev_ioctl()`、`dev_read()`、`dev_write()` 直接返回�
 
 ## 总结
 
-按键和摇一摇展示了两种典型输入路径：按键驱动已经能直接生成系统事件；摇一摇则需要项目用硬件回调和定时回调先把原始中断确认成产品语义，再主动发布事件。二者进入 `paipop_events` 后被统一翻译为玩具业务事件，最后由 FSM 结合当前状态决策。
+按键和摇一摇展示了两种典型输入路径：按键驱动已经能直接生成系统事件；摇一摇则需要项目用硬件回调和定时回调先把原始中断确认成产品语义，再主动发布事件。投递成功后，二者进入 `paipop_events`，被统一翻译为玩具业务事件，最后由 FSM 结合当前状态决策。
 
 理解这条链以后，可以用同一套方法继续追踪网络断开、OTA、音量云端指令和 SDK 生命周期变化：先找“谁发现”，再找“通过回调还是事件通知”，然后看 `paipop_events` 怎样翻译，最后看 FSM 在当前状态下做了什么。这样读项目时就不会把所有异步变化都误认为一条从 `app_main()` 顺序执行到底的普通函数调用。
