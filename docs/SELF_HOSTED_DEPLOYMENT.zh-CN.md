@@ -24,7 +24,7 @@ install -m 0755 scripts/server-post-receive.sh \
   /srv/git/blog.git/hooks/post-receive
 ```
 
-部署用户必须能写入 `/srv/git/blog.git` 和 `/srv/blog`，并能运行 Node.js 20、Corepack 和 pnpm。
+部署用户必须能写入 `/srv/git/blog.git` 和 `/srv/blog`，并能运行 Node.js 20、Corepack 和 pnpm。完整构建在小内存服务器上可能使用超过 1 GB 内存；脚本将 Node 堆上限设为 1536 MB，建议 2 GB 内存服务器同时准备至少 2 GB Swap。
 
 ## 配置本地远端
 

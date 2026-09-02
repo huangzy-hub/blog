@@ -8,6 +8,10 @@ releases_dir=/srv/blog/releases
 lock_file=/srv/blog/deploy.lock
 target_revision=
 
+# The full Twilight build needs more heap than Node selects automatically on
+# small cloud servers. Swap still protects the host from short build peaks.
+export NODE_OPTIONS=${NODE_OPTIONS:---max-old-space-size=1536}
+
 while read -r old_revision new_revision ref_name; do
     if [[ "$ref_name" == "refs/heads/main" ]]; then
         target_revision=$new_revision
@@ -43,5 +47,6 @@ next_link=/srv/blog/current.next
 rm -f "$next_link"
 ln -s "$release_dir" "$next_link"
 mv -Tf "$next_link" /srv/blog/current
+printf '%s\n' "$target_revision" > /srv/blog/deployed-revision
 
 echo "Blog deployed: $release_id"
