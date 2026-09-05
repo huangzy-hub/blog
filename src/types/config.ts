@@ -242,6 +242,7 @@ export type NavbarConfig = {
 export type WidgetComponentType =
     | "profile"
     | "announcement"
+    | "series"
     | "categories"
     | "tags"
     | "statistics"

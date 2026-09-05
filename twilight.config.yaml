@@ -191,9 +191,9 @@ sidebar:
             order: 1
             # 位置策略 ("top" 顶部固定 | "sticky" 粘性)
             position: "top"
-        - # 组件 - 公告 (预设)
+        - # 组件 - 文章合集
             # 类型
-            type: "announcement"
+            type: "series"
             # 是否启用
             enable: true
             # 所属侧边栏 ("left" 左侧 | "right" 右侧)
@@ -202,6 +202,10 @@ sidebar:
             order: 2
             # 位置策略 ("top" 顶部固定 | "sticky" 粘性)
             position: "top"
+            # 响应式配置
+            responsive:
+                # 合集较多时折叠，避免侧栏过长
+                collapseThreshold: 5
         - # 组件 - 文章类别 (预设)
             # 类型
             type: "categories"

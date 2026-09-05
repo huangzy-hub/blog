@@ -1,0 +1,52 @@
+---
+import { Icon } from "astro-icon/components";
+
+import { getSeriesList } from "@utils/content";
+import { getSeriesUrl, url } from "@utils/url";
+import { widgetManager } from "@utils/widget";
+import ButtonLink from "@components/common/buttonLink.astro";
+import WidgetLayout from "./widgetLayout.astro";
+
+
+const seriesList = await getSeriesList();
+const COLLAPSED_HEIGHT = "12rem";
+const seriesComponent = widgetManager.getConfig().components.find(component => component.type === "series");
+const isCollapsed = seriesComponent
+    ? widgetManager.isCollapsed(seriesComponent, seriesList.length)
+    : false;
+
+interface Props {
+    class?: string;
+    style?: string;
+}
+
+const className = Astro.props.class;
+const style = Astro.props.style;
+---
+
+<WidgetLayout
+    name="文章合集"
+    id="series"
+    isCollapsed={isCollapsed}
+    collapsedHeight={COLLAPSED_HEIGHT}
+    class={className}
+    style={style}
+>
+    {seriesList.map(series => (
+        <ButtonLink
+            url={getSeriesUrl(series.name)}
+            badge={String(series.posts.length)}
+            label={`查看 ${series.name} 合集`}
+        >
+            {series.name}
+        </ButtonLink>
+    ))}
+
+    <a
+        href={url("/series/")}
+        class="mt-2 h-9 rounded-lg btn-regular flex items-center justify-center gap-1 text-sm font-medium active:scale-95"
+    >
+        查看全部合集
+        <Icon name="material-symbols:arrow-forward-rounded" class="text-lg" />
+    </a>
+</WidgetLayout>
