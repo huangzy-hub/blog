@@ -6,7 +6,7 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 
 import { siteConfig, profileConfig, postConfig } from "@/config";
-import { getSortedPosts } from "@utils/content";
+import { getSeriesByName, getSortedPosts } from "@utils/content";
 import { formatDateToYYYYMMDD } from "@utils/date";
 import { getFileDirFromPath, getPostUrlBySlug, removeFileExtension} from "@utils/url";
 import { i18n } from "@i18n/translation";
@@ -17,6 +17,7 @@ import ImageWrapper from "@components/common/imageWrapper.astro";
 import Comment from "@components/post/comment.astro";
 import PasswordProtection from "@components/common/passwordProtection.astro";
 import PostMetadata from "@components/post/postMeta.astro";
+import SeriesPanel from "@components/post/seriesPanel.astro";
 import GridLayout from "@layouts/grid.astro";
 
 
@@ -61,6 +62,9 @@ const { entry } = Astro.props;
 const { Content, headings } = await render(entry);
 
 const { remarkPluginFrontmatter } = await render(entry);
+const currentSeries = entry.data.series
+    ? await getSeriesByName(entry.data.series)
+    : undefined;
 
 // 处理加密逻辑
 let isEncrypted = !!(entry.data.encrypted && entry.data.password);
@@ -173,6 +177,7 @@ const jsonLd = {
                     updated={entry.data.updated}
                     tags={entry.data.tags}
                     category={entry.data.category}
+                    series={entry.data.series}
                     slug={entry.id}
                 />
                 {
@@ -196,6 +201,9 @@ const jsonLd = {
                     </>
                 )
             }
+            {currentSeries && (
+                <SeriesPanel series={currentSeries} currentPostId={entry.id} />
+            )}
             <PasswordProtection
                 isEncrypted={isEncrypted}
                 password={entry.data.password}

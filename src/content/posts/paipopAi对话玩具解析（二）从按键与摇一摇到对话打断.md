@@ -6,6 +6,8 @@ pinned: false
 description: 沿着按键和摇一摇两条真实调用链，讲清回调、杰理系统事件、app_core、玩具状态机与 PaipopSDK 如何协作完成对话打断。
 tags: [AC791N, Paipop, 嵌入式, 系统事件, 回调函数, 状态机]
 category: 嵌入式
+series: Paipop AI 对话玩具源码解析
+seriesOrder: 3
 draft: false
 ---
 

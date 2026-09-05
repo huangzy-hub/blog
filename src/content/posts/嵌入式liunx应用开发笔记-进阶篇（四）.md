@@ -5,6 +5,8 @@ pinned: false
 description: cmake入门与进阶。
 tags: [liunx, 应用, cmake]
 category: 嵌入式
+series: 嵌入式 Linux 应用开发进阶
+seriesOrder: 4
 draft: false
 ---
 

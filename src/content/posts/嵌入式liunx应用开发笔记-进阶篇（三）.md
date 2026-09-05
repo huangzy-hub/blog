@@ -5,6 +5,8 @@ pinned: false
 description: 在LED屏幕上显示jpeg和png图片。
 tags: [liunx, 应用]
 category: 嵌入式
+series: 嵌入式 Linux 应用开发进阶
+seriesOrder: 3
 draft: false
 ---
 

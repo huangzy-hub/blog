@@ -5,6 +5,8 @@ pinned: false
 description: LED 点亮、GPIO 通用输入输出、输入设备（按键 / 触摸屏 / 鼠标）的操控逻辑。
 tags: [liunx, 应用]
 category: 嵌入式
+series: 嵌入式 Linux 应用开发进阶
+seriesOrder: 1
 draft: false
 ---
 

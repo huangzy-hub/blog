@@ -6,6 +6,8 @@ pinned: false
 description: 从 APP_STA_START 展开 Paipop 玩具的两条异步服务链：眼睛任务如何用 mutex、generation 和 snapshot 驱动 SPI/LCD，摇一摇服务如何通过 STK8321、I²C、中断、pending 和 20 ms 定时回调确认运动并发布业务事件。
 tags: [AC791N, Paipop, 嵌入式, STK8321, 回调函数, 任务通信]
 category: 嵌入式
+series: Paipop AI 对话玩具源码解析
+seriesOrder: 2
 draft: false
 ---
 

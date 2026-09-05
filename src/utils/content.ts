@@ -53,6 +53,49 @@ export async function getSortedPostsList(): Promise<PostForList[]> {
 
     return sortedPostsList;
 }
+
+export type SeriesGroup = {
+    name: string;
+    posts: CollectionEntry<"posts">[];
+};
+
+export async function getSeriesList(): Promise<SeriesGroup[]> {
+    const posts = await getRawSortedPosts();
+    const seriesMap = new Map<string, CollectionEntry<"posts">[]>();
+
+    for (const post of posts) {
+        const seriesName = post.data.series?.trim();
+        if (!seriesName) continue;
+
+        const seriesPosts = seriesMap.get(seriesName) || [];
+        seriesPosts.push(post);
+        seriesMap.set(seriesName, seriesPosts);
+    }
+
+    const groups = Array.from(seriesMap, ([name, seriesPosts]) => {
+        seriesPosts.sort((a, b) => {
+            const orderA = a.data.seriesOrder ?? Number.MAX_SAFE_INTEGER;
+            const orderB = b.data.seriesOrder ?? Number.MAX_SAFE_INTEGER;
+            if (orderA !== orderB) return orderA - orderB;
+
+            return a.data.published.getTime() - b.data.published.getTime();
+        });
+
+        return { name, posts: seriesPosts };
+    });
+
+    return groups.sort((a, b) => {
+        const latestA = Math.max(...a.posts.map(post => (post.data.updated || post.data.published).getTime()));
+        const latestB = Math.max(...b.posts.map(post => (post.data.updated || post.data.published).getTime()));
+        return latestB - latestA;
+    });
+}
+
+export async function getSeriesByName(name: string): Promise<SeriesGroup | undefined> {
+    const normalizedName = name.trim();
+    const seriesList = await getSeriesList();
+    return seriesList.find(series => series.name === normalizedName);
+}
 export type Tag = {
     name: string;
     count: number;

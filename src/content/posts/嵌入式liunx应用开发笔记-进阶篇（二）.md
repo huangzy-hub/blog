@@ -5,6 +5,8 @@ pinned: false
 description: 使用tslib，framebuffer。
 tags: [liunx,应用]
 category: 嵌入式
+series: 嵌入式 Linux 应用开发进阶
+seriesOrder: 2
 draft: false
 ---
 

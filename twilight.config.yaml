@@ -168,6 +168,11 @@ navbar:
             "Home"
         - # 一级导航链接 - 归档 (预设)
             "Archive"
+        - # 一级导航链接 - 文章合集
+            name: "合集"
+            url: "/series/"
+            icon: "material-symbols:collections-bookmark-outline-rounded"
+            description: "按主题连续阅读系列文章"
         - # 一级导航链接 - 关于 (预设)
             "About"
 
