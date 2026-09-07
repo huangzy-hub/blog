@@ -27,6 +27,7 @@ draft: false
 2. [paipopAi 对话玩具解析（一）：从 `APP_STA_START` 到眼睛任务与摇一摇服务](/posts/paipopai对话玩具解析一从应用启动到眼睛与摇一摇/)
 3. [paipopAi 对话玩具解析（二）：从按键与摇一摇到对话打断](/posts/paipopai对话玩具解析二从按键与摇一摇到对话打断/)
 4. **本文**：从普通点击启动一轮对话，追踪 PCM 上传、云端阶段和回答播放。
+5. [paipopAi 对话玩具解析（四）：PaipopSDK 如何封装 LingXinSDK](/posts/paipopai对话玩具解析四paipopsdk如何封装lingxinsdk/)：继续分析公共 API、自动认证、回调转换和 AC79 音频桥接。
 
 ## 本文范围与证据边界
 
