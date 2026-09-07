@@ -18,6 +18,11 @@
     display: none !important;
 }
 
+/* Svelte/Astro widgets such as Statistics have an extra island wrapper. */
+.post-reading-layout #right-sidebar #sidebar-sticky > :not(widget-layout[data-id="toc-wrapper"]) {
+    display: none !important;
+}
+
 @media (min-width: 768px) {
     .post-reading-layout.post-has-toc #right-sidebar {
         display: block !important;
@@ -36,7 +41,8 @@
     }
 
     .post-content-scroll {
-        height: calc(100vh - var(--post-panel-top) - 1rem);
+        height: calc(100vh - 2rem);
+        height: calc(100dvh - 2rem);
         min-height: 20rem;
         overflow-y: scroll;
         overflow-x: hidden;
