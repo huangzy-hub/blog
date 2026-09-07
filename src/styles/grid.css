@@ -23,6 +23,17 @@
     display: none !important;
 }
 
+/* Collapse the banner and move the reading panel up with the navbar. */
+body.post-reading-scrolled #banner-wrapper {
+    height: 0 !important;
+    opacity: 0;
+    pointer-events: none;
+}
+
+body.post-reading-scrolled #main-content-panel {
+    top: 1rem !important;
+}
+
 @media (min-width: 768px) {
     .post-reading-layout.post-has-toc #right-sidebar {
         display: block !important;

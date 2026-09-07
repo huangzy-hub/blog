@@ -148,6 +148,7 @@ const effectiveMainContentClass = isPostLayout
 
     <!-- Main content -->
     <div
+        id="main-content-panel"
         class={`absolute w-full z-30 pointer-events-none transition-all duration-600 ${siteConfig.wallpaper.mode !== "banner" ? "no-banner-layout" : ""} ${transparentClass}`}
         style={`top: ${finalMainPanelTop}`}
     >

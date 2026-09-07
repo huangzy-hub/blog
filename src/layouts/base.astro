@@ -477,11 +477,18 @@ function scrollFunction() {
             const isHome = document.body.classList.contains('is-home');
             const currentBannerHeight = isHome ? BANNER_HEIGHT_HOME : BANNER_HEIGHT;
             const threshold = window.innerHeight * (currentBannerHeight / 100) - NAVBAR_HEIGHT;
-            if (scrollTop >= threshold) {
+            const shouldCollapseHeader = scrollTop >= threshold;
+            document.body.classList.toggle(
+                'post-reading-scrolled',
+                postScrollContainer !== null && shouldCollapseHeader
+            );
+            if (shouldCollapseHeader) {
                 navbar.classList.add('navbar-hidden')
             } else {
                 navbar.classList.remove('navbar-hidden')
             }
+        } else {
+            document.body.classList.remove('post-reading-scrolled');
         }
     });
 }
