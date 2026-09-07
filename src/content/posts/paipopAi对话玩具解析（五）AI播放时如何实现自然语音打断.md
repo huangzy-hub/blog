@@ -35,6 +35,7 @@ draft: false
 4. [paipopAi 对话玩具解析（三）：从按键启动到云端语音回答](/posts/paipopai对话玩具解析三从按键启动到云端语音回答/)
 5. [paipopAi 对话玩具解析（四）：PaipopSDK 如何封装 LingXinSDK](/posts/paipopai对话玩具解析四paipopsdk如何封装lingxinsdk/)
 6. **本文**：从 AEC、VAD、预录 PCM 和轮次隔离理解自然语音打断。
+7. [paipopAi 对话玩具解析（六）：从开机联网到 AP 网页配网](/posts/paipopai对话玩具解析六从开机联网到ap网页配网/)
 
 ## 本文范围与证据边界
 
