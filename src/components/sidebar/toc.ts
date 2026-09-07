@@ -34,6 +34,10 @@ export class TableOfContents extends HTMLElement {
         this.observer = new IntersectionObserver(this.markVisibleSection);
     };
 
+    getContentScrollContainer() {
+        return document.querySelector<HTMLElement>("#content-wrapper.post-content-scroll");
+    }
+
     markActiveHeading = (idx: number)=> {
         this.active = new Array(this.headings.length).fill(false);
         this.active[idx] = true;
@@ -47,10 +51,14 @@ export class TableOfContents extends HTMLElement {
         if (!this.headings.length) return;
 
         let activeIdx = -1;
+        const scrollContainer = this.getContentScrollContainer();
+        const threshold = scrollContainer
+            ? scrollContainer.getBoundingClientRect().top + 48
+            : 100;
         for (let i = 0; i < this.headings.length; i++) {
             const heading = this.headings[i];
             const rect = heading.getBoundingClientRect();
-            if (rect.top < 100) {
+            if (rect.top < threshold) {
                 activeIdx = i;
             } else {
                 break;
@@ -140,12 +148,25 @@ export class TableOfContents extends HTMLElement {
             const id = decodeURIComponent(anchor.hash?.substring(1));
             const targetElement = document.getElementById(id);
             if (targetElement) {
-                const navbarHeight = parseInt(this.dataset.navbarHeight || NAVBAR_HEIGHT.toString());
-                const targetTop = targetElement.getBoundingClientRect().top + window.scrollY - navbarHeight;
-                window.scrollTo({
-                    top: targetTop,
-                    behavior: "smooth"
-                });
+                const scrollContainer = this.getContentScrollContainer();
+                if (scrollContainer) {
+                    const containerRect = scrollContainer.getBoundingClientRect();
+                    const targetTop = targetElement.getBoundingClientRect().top
+                        - containerRect.top
+                        + scrollContainer.scrollTop
+                        - 24;
+                    scrollContainer.scrollTo({
+                        top: targetTop,
+                        behavior: "smooth",
+                    });
+                } else {
+                    const navbarHeight = parseInt(this.dataset.navbarHeight || NAVBAR_HEIGHT.toString());
+                    const targetTop = targetElement.getBoundingClientRect().top + window.scrollY - navbarHeight;
+                    window.scrollTo({
+                        top: targetTop,
+                        behavior: "smooth"
+                    });
+                }
             }
             const idx = this.headingIdxMap.get(id);
             if (idx !== undefined) {
@@ -269,6 +290,10 @@ export class TableOfContents extends HTMLElement {
 
     init() {
         this.observer.disconnect();
+        const scrollContainer = this.getContentScrollContainer();
+        this.observer = new IntersectionObserver(this.markVisibleSection, {
+            root: scrollContainer,
+        });
         this.headingIdxMap.clear();
         this.headings = [];
         this.active = [];

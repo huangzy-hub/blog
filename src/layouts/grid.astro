@@ -62,6 +62,10 @@ const shouldEnableTransparency = siteConfig.wallpaper.mode === "banner" || siteC
 // 为组件添加半透明效果的CSS类
 const transparentClass = shouldEnableTransparency ? "wallpaper-transparent" : "";
 
+// Article pages use a focused reading layout: TOC on the left and content on the right.
+const isPostLayout = setOGTypeArticle === true;
+const postHasToc = isPostLayout && headings.length > 0;
+
 /**
  * Sidebar
  */
@@ -78,6 +82,20 @@ const {
     rightSidebarClass,
     mainContentClass,
 } = widgetManager.getGridLayout(headings);
+
+const effectiveGridCols = isPostLayout
+    ? postHasToc
+        ? "grid-cols-1 md:grid-cols-[17.5rem_minmax(0,1fr)] lg:grid-cols-[17.5rem_minmax(0,1fr)]"
+        : "grid-cols-1 md:grid-cols-1 lg:grid-cols-1"
+    : gridCols;
+
+const effectiveMainContentClass = isPostLayout
+    ? `overflow-hidden w-full col-span-1 row-start-1 row-end-2 ${
+        postHasToc
+            ? "md:col-start-2 md:col-end-3 lg:col-start-2 lg:col-end-3"
+            : "md:col-span-1 lg:col-span-1"
+    }`
+    : mainContentClass;
 ---
 
 <BaseLayout
@@ -138,7 +156,7 @@ const {
         >
             <div
                     id="main-grid"
-                    class={`transition-all duration-600 w-full left-0 right-0 grid ${gridCols} grid-rows-[auto] mx-auto gap-4 px-0 md:px-4 ${!mobileShowSidebar ? "mobile-no-sidebar" : ""} ${(hasLeftSidebar || hasRightSidebar) ? "mobile-both-sidebar" : ""}`}
+                    class={`transition-all duration-600 w-full left-0 right-0 grid ${effectiveGridCols} grid-rows-[auto] mx-auto gap-4 px-0 md:px-4 ${!mobileShowSidebar ? "mobile-no-sidebar" : ""} ${(hasLeftSidebar || hasRightSidebar) ? "mobile-both-sidebar" : ""} ${isPostLayout ? "post-reading-layout" : ""} ${postHasToc ? "post-has-toc" : ""}`}
                 >
                 <!-- Banner image credit -->
                 {
@@ -208,12 +226,24 @@ const {
 
                 <main
                     id="swup-container"
-                    class={`${mainContentClass} transition-swup-fade`}
+                    class={`${effectiveMainContentClass} transition-swup-fade`}
                 >
-                    <div id="grid-class-carrier" data-grid-class={gridCols} class="hidden"></div>
+                    <div
+                        id="grid-class-carrier"
+                        data-grid-class={effectiveGridCols}
+                        data-post-layout={String(isPostLayout)}
+                        data-post-has-toc={String(postHasToc)}
+                        class="hidden"
+                    ></div>
                     <div
                         id="content-wrapper"
-                        class="onload-animation-up transition-leaving"
+                        class:list={[
+                            "onload-animation-up transition-leaving",
+                            { "post-content-scroll": isPostLayout },
+                        ]}
+                        style={isPostLayout ? `--post-panel-top: ${finalMainPanelTop}` : undefined}
+                        tabindex={isPostLayout ? 0 : undefined}
+                        aria-label={isPostLayout ? "文章正文" : undefined}
                     >
                         <slot />
                         <div

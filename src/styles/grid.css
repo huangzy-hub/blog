@@ -9,9 +9,79 @@
     display: none !important;
 }
 
+/* Article reading layout: keep only the TOC on the left and let the post fill the rest. */
+.post-reading-layout #left-sidebar {
+    display: none !important;
+}
+
+.post-reading-layout #right-sidebar widget-layout:not([data-id="toc-wrapper"]) {
+    display: none !important;
+}
+
+@media (min-width: 768px) {
+    .post-reading-layout.post-has-toc #right-sidebar {
+        display: block !important;
+        width: 100% !important;
+        max-width: 17.5rem !important;
+        grid-column: 1 / 2 !important;
+        grid-row: 1 / 2 !important;
+    }
+
+    .post-reading-layout:not(.post-has-toc) #right-sidebar {
+        display: none !important;
+    }
+
+    .post-reading-layout #right-sidebar #sidebar-sticky {
+        top: 1rem;
+    }
+
+    .post-content-scroll {
+        height: calc(100vh - var(--post-panel-top) - 1rem);
+        min-height: 20rem;
+        overflow-y: scroll;
+        overflow-x: hidden;
+        padding-right: 0.4rem;
+        scrollbar-gutter: stable;
+        scrollbar-width: thin;
+        scrollbar-color: var(--toc-btn-hover) transparent;
+        scroll-behavior: smooth;
+        overscroll-behavior: contain;
+    }
+
+    .post-content-scroll::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .post-content-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .post-content-scroll::-webkit-scrollbar-thumb {
+        background: var(--toc-btn-hover);
+        border-radius: 999px;
+    }
+}
+
 
 /* 手机端无侧边栏布局优化 */
 @media (max-width: 768px) {
+    .post-reading-layout {
+        display: block !important;
+        width: 100% !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    .post-reading-layout #right-sidebar {
+        display: none !important;
+    }
+
+    .post-reading-layout main {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+
     .mobile-no-sidebar {
         display: block !important;
         width: 100% !important;

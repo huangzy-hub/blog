@@ -338,8 +338,11 @@ const setup = () => {
                 const newClasses = currentClasses.filter(c => !c.startsWith("lg:grid-cols-") && !c.startsWith("md:grid-cols-") && !c.startsWith("grid-cols-"));
                 const gridClasses = gridClass.split(" ");
                 mainGrid.className = [...newClasses, ...gridClasses].join(" ");
+                mainGrid.classList.toggle("post-reading-layout", gridClassCarrier.dataset.postLayout === "true");
+                mainGrid.classList.toggle("post-has-toc", gridClassCarrier.dataset.postHasToc === "true");
             }
         }
+        bindPostScrollContainer();
         // Reinitialize semifull mode scroll detection after page transition
         const navbar = document.getElementById('navbar')
         if (navbar) {
@@ -406,6 +409,10 @@ const setup = () => {
             top: 0,
             behavior: 'smooth'
         });
+        document.querySelector<HTMLElement>('#content-wrapper.post-content-scroll')?.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
         // Check if the current page is a post page, if so, trigger a custom event to initialize the comment system
         setTimeout(() => {
             if (document.getElementById('tcomment')) {
@@ -438,6 +445,7 @@ if (window?.swup?.hooks) {
 let navbar = document.getElementById('navbar-wrapper')
 // 初始化返回顶部按钮元素，用于控制返回顶部按钮的显示与隐藏
 let backToTopBtn = document.getElementById('back-to-top-btn');
+let postScrollContainer: HTMLElement | null = null;
 // 节流函数
 function throttle(func: (...args: any[]) => void, limit: number) {
     let inThrottle: boolean;
@@ -451,7 +459,9 @@ function throttle(func: (...args: any[]) => void, limit: number) {
 }
 // 滚动事件处理函数，用于控制返回顶部按钮和banner隐藏
 function scrollFunction() {
-    const scrollTop = document.documentElement.scrollTop;
+    const scrollTop = postScrollContainer?.isConnected
+        ? postScrollContainer.scrollTop
+        : document.documentElement.scrollTop;
     const bannerHeight = window.innerHeight * (BANNER_HEIGHT / 100);
     const bannerEnabled = !!document.getElementById('banner-wrapper')
     // 批量处理DOM操作
@@ -476,7 +486,17 @@ function scrollFunction() {
     });
 }
 // 使用节流优化滚动性能
-window.onscroll = throttle(scrollFunction, 16); // 约60fps
+const throttledScrollFunction = throttle(scrollFunction, 16);
+
+function bindPostScrollContainer() {
+    postScrollContainer?.removeEventListener('scroll', throttledScrollFunction);
+    postScrollContainer = document.querySelector<HTMLElement>('#content-wrapper.post-content-scroll');
+    postScrollContainer?.addEventListener('scroll', throttledScrollFunction, { passive: true });
+    scrollFunction();
+}
+
+window.onscroll = throttledScrollFunction; // 约60fps
+bindPostScrollContainer();
 // 监听窗口 resize 事件，用于更新 banner 高度相关的 CSS 变量
 window.onresize = () => {
     // calculate the --banner-height-extend, which needs to be a multiple of 4 to avoid blurry text
