@@ -17,9 +17,22 @@ async function getRawSortedPosts() {
         if (!a.data.pinned && b.data.pinned) return 1;
 
         // 如果置顶状态相同，则按发布日期排序
-        const dateA = new Date(a.data.published);
-        const dateB = new Date(b.data.published);
-        return dateA > dateB ? -1 : 1;
+        const publishedDiff = b.data.published.getTime() - a.data.published.getTime();
+        if (publishedDiff !== 0) return publishedDiff;
+
+        // 同一系列在同一天发布多篇时，篇号大的排在前面。
+        const seriesA = a.data.series?.trim();
+        const seriesB = b.data.series?.trim();
+        if (seriesA && seriesA === seriesB) {
+            const orderA = a.data.seriesOrder;
+            const orderB = b.data.seriesOrder;
+            if (orderA !== undefined && orderB !== undefined && orderA !== orderB) {
+                return orderB - orderA;
+            }
+        }
+
+        // 为同日期、非同系列文章提供确定性的最终顺序。
+        return b.id.localeCompare(a.id, "zh-CN");
     });
     return sorted;
 }
