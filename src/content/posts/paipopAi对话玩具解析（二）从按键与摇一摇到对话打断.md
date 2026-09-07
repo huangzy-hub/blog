@@ -18,6 +18,7 @@ draft: false
 1. [杰理 AC79 应用启动与注册机制详解：从 `REGISTER_APPLICATION` 到 `start_app`](/posts/杰理ac79应用启动与注册机制详解/)
 2. [paipopAi对话玩具解析（一）：从 `APP_STA_START` 到眼睛任务与摇一摇服务](/posts/paipopai对话玩具解析一从应用启动到眼睛与摇一摇/)
 3. **本文**：从外部刺激、系统事件一路追到玩具 FSM 和对话打断。
+4. [paipopAi对话玩具解析（三）：从按键启动到云端语音回答](/posts/paipopai对话玩具解析三从按键启动到云端语音回答/)：继续追踪 PCM 上传、云端阶段、文字回调与流式回答播放。
 
 前两篇分别回答了两个问题：杰理怎样找到并启动 `paipop_toy` 应用，以及应用进入 `APP_STA_START` 后怎样创建眼睛任务、初始化 STK8321、注册 GPIO 中断和 20 ms 定时回调。
 
