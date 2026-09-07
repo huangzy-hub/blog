@@ -21,7 +21,9 @@ if ($LASTEXITCODE -ne 0) { throw 'Local blog build failed.' }
 
 if ($IdentityFile) {
     $resolvedIdentity = (Resolve-Path -LiteralPath $IdentityFile).Path
-    $sshCommand = "ssh -o IdentitiesOnly=yes -i `"$resolvedIdentity`""
+    # Git parses core.sshCommand with shell escaping, so Windows backslashes must be normalized.
+    $gitIdentity = $resolvedIdentity.Replace('\', '/')
+    $sshCommand = "ssh -o IdentitiesOnly=yes -i `"$gitIdentity`""
     git -c "core.sshCommand=$sshCommand" push $RemoteName HEAD:main
 } else {
     git push $RemoteName HEAD:main
