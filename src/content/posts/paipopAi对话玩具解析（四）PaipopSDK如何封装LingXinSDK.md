@@ -746,7 +746,7 @@ PAIPOP_CHAT_LIFE_CYCLE_EVENT_AI_TEXT
 {
   "type": "action_list",
   "result": [
-    {"action": "set_volume", "params": {"value": 40}}
+    {"action": "set_volume", "params": {"volume": 40}}
   ]
 }
 ```

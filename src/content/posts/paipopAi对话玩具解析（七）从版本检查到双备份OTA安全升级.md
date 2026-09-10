@@ -45,6 +45,7 @@ paipop_ota_network_ready();
 6. [paipopAi 对话玩具解析（五）：AI 播放时如何实现自然语音打断](/posts/paipopai对话玩具解析五ai播放时如何实现自然语音打断/)
 7. [paipopAi 对话玩具解析（六）：从开机联网到 AP 网页配网](/posts/paipopai对话玩具解析六从开机联网到ap网页配网/)
 8. **本文**：从版本检查、双备份写入到重启确认。
+9. [paipopAi 对话玩具解析（八）：本地音量与云端动作指令](/posts/paipopai对话玩具解析八本地音量与云端动作指令/)
 
 ## 本文范围与证据边界
 
