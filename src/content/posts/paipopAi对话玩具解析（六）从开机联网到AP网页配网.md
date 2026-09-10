@@ -46,6 +46,7 @@ draft: false
 5. [paipopAi 对话玩具解析（四）：PaipopSDK 如何封装 LingXinSDK](/posts/paipopai对话玩具解析四paipopsdk如何封装lingxinsdk/)
 6. [paipopAi 对话玩具解析（五）：AI 播放时如何实现自然语音打断](/posts/paipopai对话玩具解析五ai播放时如何实现自然语音打断/)
 7. **本文**：从开机自动联网、失败回退到 AP 网页配网。
+8. [paipopAi 对话玩具解析（七）：从版本检查到双备份 OTA 安全升级](/posts/paipopai对话玩具解析七从版本检查到双备份ota安全升级/)
 
 ## 本文范围与证据边界
 
